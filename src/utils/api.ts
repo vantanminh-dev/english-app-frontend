@@ -11,16 +11,23 @@ const api = axios.create({
 
 export interface DictionaryResponse {
   word: string;
+  correction: string;
+  isCorrect: boolean;
+  suggestedWord: string | null;
   definition: string;
-  phonetic?: string;
-  partOfSpeech?: string;
-  examples?: string[];
-  translations?: {
+  phonetic: string;
+  partOfSpeech: string;
+  examples: string[];
+  translations: {
     vietnamese: string;
   };
-  synonyms?: string[];
-  antonyms?: string[];
+  synonyms: string[];
+  antonyms: string[];
   source: 'gemini' | 'database';
+  usage: {
+    frequency: number;
+    lastAccessed: string;
+  };
 }
 
 export interface VocabList {

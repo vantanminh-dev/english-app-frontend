@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useStore } from '@/store/useStore';
 import { dictionaryApi, vocabListApi, DictionaryResponse } from '@/utils/api';
 import Link from 'next/link';
+import CorrectWordAlert from '@/components/CorrectWordAlert';
 
 export default function VocabListDetailPage() {
   const params = useParams();
@@ -36,8 +37,7 @@ export default function VocabListDetailPage() {
     }
   };
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSearch = async () => {
     if (!searchWord.trim()) return;
 
     setIsSearching(true);
@@ -153,6 +153,13 @@ export default function VocabListDetailPage() {
 
         {searchResult && (
           <div className="mb-8">
+            {searchResult.correction && (
+              <CorrectWordAlert
+                word={searchResult.word}
+                correction={searchResult.correction}
+                onSearch={() => handleSearch()}
+              />
+            )}
             <div className="bg-white rounded-lg shadow p-6">
               <h2 className="text-xl font-semibold text-gray-900 mb-2">
                 {searchResult.word}
