@@ -1,4 +1,7 @@
+'use client';
+
 import Navbar from '@/components/Navbar';
+import { AuthProvider } from '@/context/AuthContext';
 import './globals.css';
 
 export default function RootLayout({
@@ -9,12 +12,14 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <div className="min-h-screen flex flex-col bg-gray-50">
-          <Navbar />
-          <main className="flex-grow">
-            {children}
-          </main>
-        </div>
+        <AuthProvider>
+          <div className="min-h-screen flex flex-col bg-gray-50">
+            <Navbar />
+            <main className="flex-grow">
+              {children}
+            </main>
+          </div>
+        </AuthProvider>
       </body>
     </html>
   );

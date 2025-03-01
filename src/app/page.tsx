@@ -5,12 +5,17 @@ import { dictionaryApi, DictionaryResponse } from '@/utils/api';
 import CorrectWordAlert from '@/components/CorrectWordAlert';
 import SaveWordButton from '@/components/SaveWordButton';
 import SavedWords from '@/components/SavedWords';
+import { useAuth } from '@/context/AuthContext';
+import AuthModal from '@/components/AuthModal';
+import TextToSpeechButton from '@/components/TextToSpeechButton';
 
 export default function Home() {
   const [word, setWord] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<DictionaryResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const { isAuthenticated } = useAuth();
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,13 +90,20 @@ export default function Home() {
 
         <form onSubmit={handleSearch} className="mb-8">
           <div className="flex gap-4">
-            <input
-              type="text"
-              value={word}
-              onChange={(e) => setWord(e.target.value)}
-              placeholder="Enter a word to look up..."
-              className="flex-1 p-4 text-lg border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+            <div className="flex-1 relative">
+              <input
+                type="text"
+                value={word}
+                onChange={(e) => setWord(e.target.value)}
+                placeholder="Enter a word to look up..."
+                className="w-full p-4 text-lg border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              {word.trim() && (
+                <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
+                  <TextToSpeechButton text={word.trim()} />
+                </div>
+              )}
+            </div>
             <button
               type="submit"
               disabled={loading}
@@ -123,7 +135,10 @@ export default function Home() {
             <div className="border-b pb-4">
               <div className="flex justify-between items-start">
                 <div>
-                  <h2 className="text-3xl font-bold mb-2">{result.word}</h2>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-3xl font-bold mb-2">{result.word}</h2>
+                    <TextToSpeechButton text={result.word} />
+                  </div>
                   {result.phonetic && (
                     <p className="text-gray-600 text-lg">{result.phonetic}</p>
                   )}
@@ -131,7 +146,30 @@ export default function Home() {
                     <p className="text-gray-600 italic">{result.partOfSpeech}</p>
                   )}
                 </div>
-                <SaveWordButton wordData={result} />
+                {isAuthenticated ? (
+                  <SaveWordButton wordData={result} />
+                ) : (
+                  <button
+                    onClick={() => setIsAuthModalOpen(true)}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-5 w-5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
+                      />
+                    </svg>
+                    Login to Save
+                  </button>
+                )}
               </div>
             </div>
 
@@ -152,7 +190,10 @@ export default function Home() {
                 <h3 className="text-xl font-semibold mb-3">Examples:</h3>
                 <ul className="list-disc list-inside space-y-2">
                   {result.examples.map((example, index) => (
-                    <li key={index} className="text-lg text-gray-700">{example}</li>
+                    <li key={index} className="text-lg text-gray-700 flex items-center gap-2">
+                      <span>{example}</span>
+                      <TextToSpeechButton text={example} className="ml-2" />
+                    </li>
                   ))}
                 </ul>
               </div>
@@ -197,8 +238,15 @@ export default function Home() {
         )}
       </div>
       
-      {/* Saved Words Component */}
-      <SavedWords onWordSelect={handleSavedWordSelect} />
+      {/* Saved Words Component - Only show for authenticated users */}
+      {isAuthenticated && <SavedWords onWordSelect={handleSavedWordSelect} />}
+      
+      {/* Auth Modal */}
+      <AuthModal 
+        isOpen={isAuthModalOpen} 
+        onClose={() => setIsAuthModalOpen(false)} 
+        initialView="login" 
+      />
     </div>
   );
 }

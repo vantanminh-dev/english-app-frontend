@@ -110,6 +110,15 @@ export const vocabListApi = {
   },
 };
 
+export const textToSpeechApi = {
+  speak: async (text: string): Promise<string> => {
+    // Encode the text for URL
+    const encodedText = encodeURIComponent(text);
+    // Return the URL for the audio
+    return `https://proxy.junookyo.workers.dev/?language=en-US&text=${encodedText}`;
+  }
+};
+
 // Error handling interceptor
 api.interceptors.response.use(
   response => response,

@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getSavedWords, removeSavedWord, SavedWord } from '@/utils/localStorage';
+import { useAuth } from '@/context/AuthContext';
+import axios from 'axios';
 
 interface SavedWordsProps {
   onWordSelect: (word: string) => void;
@@ -8,24 +10,84 @@ interface SavedWordsProps {
 const SavedWords: React.FC<SavedWordsProps> = ({ onWordSelect }) => {
   const [savedWords, setSavedWords] = useState<SavedWord[]>([]);
   const [isOpen, setIsOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const { isAuthenticated, user } = useAuth();
+  
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
   useEffect(() => {
     // Load saved words when component mounts or when isOpen changes to true
     if (isOpen) {
-      setSavedWords(getSavedWords());
+      loadSavedWords();
     }
-  }, [isOpen]);
+  }, [isOpen, isAuthenticated]);
 
-  const handleRemoveWord = (word: string, e: React.MouseEvent) => {
+  const loadSavedWords = async () => {
+    setIsLoading(true);
+    
+    try {
+      if (isAuthenticated) {
+        // This is a placeholder - you would need to implement the API call to get saved words
+        // For now, we'll just use localStorage
+        setSavedWords(getSavedWords());
+      } else {
+        // Use localStorage for non-authenticated users
+        setSavedWords(getSavedWords());
+      }
+    } catch (error) {
+      console.error('Error loading saved words:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRemoveWord = async (word: string, e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent triggering the word selection
-    removeSavedWord(word);
-    setSavedWords(getSavedWords());
+    
+    try {
+      if (isAuthenticated) {
+        // This is a placeholder - you would need to implement the API call to remove a word
+        // For now, we'll just use localStorage
+        removeSavedWord(word);
+      } else {
+        // Use localStorage for non-authenticated users
+        removeSavedWord(word);
+      }
+      
+      // Refresh the list
+      loadSavedWords();
+    } catch (error) {
+      console.error('Error removing word:', error);
+    }
   };
 
   const handleWordClick = (word: string) => {
     onWordSelect(word);
     setIsOpen(false); // Close the panel after selecting a word
   };
+
+  if (isLoading) {
+    return (
+      <div className="fixed bottom-4 right-4 z-10">
+        <div className="bg-white rounded-lg shadow-lg p-4 w-80">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold">Saved Words</h3>
+            <button 
+              onClick={() => setIsOpen(false)}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+              </svg>
+            </button>
+          </div>
+          <div className="flex justify-center items-center p-4">
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (savedWords.length === 0 && isOpen) {
     return (
