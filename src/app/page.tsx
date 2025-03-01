@@ -1,7 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { dictionaryApi, DictionaryResponse } from '@/utils/api';
+import CorrectWordAlert from '@/components/CorrectWordAlert';
+import SaveWordButton from '@/components/SaveWordButton';
+import SavedWords from '@/components/SavedWords';
 
 export default function Home() {
   const [word, setWord] = useState('');
@@ -26,6 +29,52 @@ export default function Home() {
       setLoading(false);
     }
   };
+
+  const handleCorrectionSearch = async () => {
+    if (result?.correction) {
+      setWord(result.correction);
+      setLoading(true);
+      setError(null);
+      setResult(null);
+
+      try {
+        const data = await dictionaryApi.lookup(result.correction);
+        setResult(data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to lookup word');
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  const handleSavedWordSelect = (selectedWord: string) => {
+    setWord(selectedWord);
+    handleLookupWord(selectedWord);
+  };
+
+  const handleLookupWord = async (wordToLookup: string) => {
+    if (!wordToLookup.trim()) return;
+
+    setLoading(true);
+    setError(null);
+    setResult(null);
+
+    try {
+      const data = await dictionaryApi.lookup(wordToLookup.trim());
+      setResult(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to lookup word');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Add client-side only effect to handle localStorage
+  useEffect(() => {
+    // This is just to ensure the component is mounted before accessing localStorage
+    // No actual implementation needed here
+  }, []);
 
   return (
     <div className="min-h-screen p-4 md:p-8">
@@ -59,16 +108,31 @@ export default function Home() {
           </div>
         )}
 
+        {result && !result.isCorrect && result.correction && (
+          <div className="mb-6">
+            <CorrectWordAlert 
+              word={result.word} 
+              correction={result.correction} 
+              onSearch={handleCorrectionSearch} 
+            />
+          </div>
+        )}
+
         {result && (
           <div className="bg-white rounded-lg shadow-lg p-8 space-y-6">
             <div className="border-b pb-4">
-              <h2 className="text-3xl font-bold mb-2">{result.word}</h2>
-              {result.phonetic && (
-                <p className="text-gray-600 text-lg">{result.phonetic}</p>
-              )}
-              {result.partOfSpeech && (
-                <p className="text-gray-600 italic">{result.partOfSpeech}</p>
-              )}
+              <div className="flex justify-between items-start">
+                <div>
+                  <h2 className="text-3xl font-bold mb-2">{result.word}</h2>
+                  {result.phonetic && (
+                    <p className="text-gray-600 text-lg">{result.phonetic}</p>
+                  )}
+                  {result.partOfSpeech && (
+                    <p className="text-gray-600 italic">{result.partOfSpeech}</p>
+                  )}
+                </div>
+                <SaveWordButton wordData={result} />
+              </div>
             </div>
 
             <div>
@@ -132,6 +196,9 @@ export default function Home() {
           </div>
         )}
       </div>
+      
+      {/* Saved Words Component */}
+      <SavedWords onWordSelect={handleSavedWordSelect} />
     </div>
   );
 }

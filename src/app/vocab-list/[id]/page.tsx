@@ -37,15 +37,16 @@ export default function VocabListDetailPage() {
     }
   };
 
-  const handleSearch = async () => {
-    if (!searchWord.trim()) return;
+  const handleSearch = async (wordOverride?: string) => {
+    const wordToSearch = wordOverride || searchWord;
+    if (!wordToSearch.trim()) return;
 
     setIsSearching(true);
     setError(null);
     setSearchResult(null);
 
     try {
-      const result = await dictionaryApi.lookup(searchWord.trim());
+      const result = await dictionaryApi.lookup(wordToSearch.trim());
       setSearchResult(result);
     } catch (error) {
       setError('Failed to lookup word');
@@ -126,7 +127,10 @@ export default function VocabListDetailPage() {
           </div>
         </div>
 
-        <form onSubmit={handleSearch} className="mb-8">
+        <form onSubmit={(e) => {
+          e.preventDefault();
+          handleSearch();
+        }} className="mb-8">
           <div className="flex gap-4">
             <input
               type="text"
@@ -153,11 +157,11 @@ export default function VocabListDetailPage() {
 
         {searchResult && (
           <div className="mb-8">
-            {searchResult.correction && (
+            {!searchResult.isCorrect && searchResult.suggestedWord && (
               <CorrectWordAlert
                 word={searchResult.word}
-                correction={searchResult.correction}
-                onSearch={() => handleSearch()}
+                correction={searchResult.suggestedWord}
+                onSearch={() => handleSearch(searchResult.suggestedWord)}
               />
             )}
             <div className="bg-white rounded-lg shadow p-6">

@@ -11,9 +11,9 @@ const api = axios.create({
 
 export interface DictionaryResponse {
   word: string;
-  correction: string;
+  correction?: string;
   isCorrect: boolean;
-  suggestedWord: string | null;
+  suggestedWord: string;
   definition: string;
   phonetic: string;
   partOfSpeech: string;
