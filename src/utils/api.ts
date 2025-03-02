@@ -53,6 +53,7 @@ export interface DictionaryResponse {
     frequency: number;
     lastAccessed: string;
   };
+  folderId?: string;
 }
 
 export interface VocabList {

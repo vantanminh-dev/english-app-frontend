@@ -12,6 +12,7 @@ export interface SavedWord {
     vietnamese?: string;
   };
   savedAt: string;
+  folderId?: string;
 }
 
 // Helper function to check if code is running on the client
@@ -37,7 +38,8 @@ export const saveWord = (wordData: DictionaryResponse): void => {
     phonetic: wordData.phonetic || '',
     partOfSpeech: wordData.partOfSpeech,
     translations: wordData.translations,
-    savedAt: new Date().toISOString()
+    savedAt: new Date().toISOString(),
+    folderId: wordData.folderId
   };
   
   if (existingIndex >= 0) {
@@ -88,4 +90,35 @@ export const isWordSaved = (word: string): boolean => {
   
   const savedWords = getSavedWords();
   return savedWords.some(item => item.word.toLowerCase() === word.toLowerCase());
+};
+
+export const assignWordToFolder = (wordId: string, folderId: string): void => {
+  if (!isClient) return;
+  
+  const savedWords = getSavedWords();
+  const wordIndex = savedWords.findIndex(item => item._id === wordId);
+  
+  if (wordIndex >= 0) {
+    savedWords[wordIndex].folderId = folderId;
+    localStorage.setItem(SAVED_WORDS_KEY, JSON.stringify(savedWords));
+  }
+};
+
+export const removeWordFromFolder = (wordId: string): void => {
+  if (!isClient) return;
+  
+  const savedWords = getSavedWords();
+  const wordIndex = savedWords.findIndex(item => item._id === wordId);
+  
+  if (wordIndex >= 0) {
+    delete savedWords[wordIndex].folderId;
+    localStorage.setItem(SAVED_WORDS_KEY, JSON.stringify(savedWords));
+  }
+};
+
+export const getWordsInFolder = (folderId: string): SavedWord[] => {
+  if (!isClient) return [];
+  
+  const savedWords = getSavedWords();
+  return savedWords.filter(item => item.folderId === folderId);
 };

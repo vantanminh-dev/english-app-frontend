@@ -3,6 +3,11 @@ import { saveWord, removeSavedWord, isWordSaved } from '@/utils/localStorage';
 import { DictionaryResponse, savedWordsApi } from '@/utils/api';
 import { useAuth } from '@/context/AuthContext';
 
+interface ApiError extends Error {
+  isBadRequestError?: boolean;
+  message: string;
+}
+
 interface SaveWordButtonProps {
   wordData: DictionaryResponse;
 }
@@ -15,31 +20,86 @@ const SaveWordButton: React.FC<SaveWordButtonProps> = ({ wordData }) => {
   const [isClient, setIsClient] = useState(false);
   const { isAuthenticated, triggerSavedWordsUpdate, savedWordsUpdated } = useAuth();
 
-  // Use useEffect to set isClient to true after component mounts
   useEffect(() => {
     setIsClient(true);
   }, []);
 
   useEffect(() => {
-    // Check if the word is already saved when the component mounts or wordData changes
-    // or when savedWordsUpdated changes, but only on the client side
     if (isClient) {
+      const syncSavedWords = async () => {
+        if (isAuthenticated) {
+          try {
+            const savedWords = await savedWordsApi.getSavedWords();
+            if (Array.isArray(savedWords)) {
+              for (const word of savedWords) {
+                if (word?.wordText && !isWordSaved(word.wordText)) {
+                  saveWord({
+                    word: word.wordText,
+                    correction: '',
+                    isCorrect: true,
+                    suggestedWord: '',
+                    definition: '',
+                    phonetic: '',
+                    partOfSpeech: '',
+                    examples: [],
+                    translations: {
+                      vietnamese: ''
+                    },
+                    synonyms: [],
+                    antonyms: [],
+                    source: 'database',
+                    usage: {
+                      frequency: 0,
+                      lastAccessed: new Date().toISOString()
+                    }
+                  });
+                }
+              }
+            }
+          } catch (error) {
+            console.error('Error syncing saved words:', error);
+          }
+        }
+        checkIfWordSaved();
+      };
+      syncSavedWords();
+    }
+  }, [wordData, isAuthenticated, savedWordsUpdated, isClient]);
+
+  useEffect(() => {
+    if (isClient) {
+      setIsSaved(false);
       checkIfWordSaved();
     }
-  }, [wordData.word, isAuthenticated, savedWordsUpdated, isClient]);
+  }, [wordData.word]);
 
   const checkIfWordSaved = async () => {
     if (!isClient) return;
     
     try {
+      const localSaved = isWordSaved(wordData.word);
+      
       if (isAuthenticated) {
-        // Check if word is saved in the API using the new savedWordsApi
-        const saved = await savedWordsApi.isWordSaved(wordData.word);
-        setIsSaved(saved);
+        try {
+          const apiSaved = await savedWordsApi.isWordSaved(wordData.word);
+          
+          if (localSaved !== apiSaved) {
+            if (apiSaved) {
+              saveWord(wordData);
+            } else {
+              removeSavedWord(wordData.word);
+            }
+          }
+          
+          setIsSaved(apiSaved);
+        } catch (error) {
+          console.error('Error checking API saved status:', error);
+          setIsSaved(localSaved);
+        }
       } else {
-        // Use localStorage for non-authenticated users
-        setIsSaved(isWordSaved(wordData.word));
+        setIsSaved(localSaved);
       }
+      
       setSaveError(false);
     } catch (error) {
       console.error('Error checking if word is saved:', error);
@@ -56,55 +116,70 @@ const SaveWordButton: React.FC<SaveWordButtonProps> = ({ wordData }) => {
     setSaveError(false);
     
     try {
-      if (isAuthenticated) {
-        if (isSaved) {
-          // Get the saved words to find the ID of the word to remove
-          const savedWords = await savedWordsApi.getSavedWords();
-          const savedWord = savedWords.find(sw => 
-            sw.wordText.toLowerCase() === wordData.word.toLowerCase()
-          );
-          
-          if (savedWord) {
-            // Remove word using the new savedWordsApi
-            await savedWordsApi.removeSavedWord(savedWord._id);
-          } else {
-            throw new Error('Word not found in saved words');
-          }
-        } else {
-          // Add word using the new savedWordsApi
-          await savedWordsApi.saveWord({
-            word: wordData.word,
-            notes: '' // Optional notes can be added here
-          });
-          // Show success indicator
-          setSaveSuccess(true);
-          setTimeout(() => setSaveSuccess(false), 2000);
-        }
-        // Trigger update for other components
-        triggerSavedWordsUpdate();
+      if (isSaved) {
+        removeSavedWord(wordData.word);
       } else {
-        // Use localStorage for non-authenticated users
-        if (isSaved) {
-          removeSavedWord(wordData.word);
-        } else {
-          saveWord(wordData);
+        saveWord(wordData);
+      }
+      
+      if (isAuthenticated) {
+        try {
+          if (isSaved) {
+            const savedWords = await savedWordsApi.getSavedWords();
+            if (Array.isArray(savedWords)) {
+              const savedWord = savedWords.find(sw => 
+                sw?.wordText?.toLowerCase() === wordData.word.toLowerCase()
+              );
+              
+              if (savedWord?._id) {
+                await savedWordsApi.removeSavedWord(savedWord._id);
+              } else {
+                throw new Error('Word not found in saved words');
+              }
+            }
+          } else {
+            const response = await savedWordsApi.saveWord({
+              word: wordData.word,
+              notes: ''
+            });
+            
+            if (!response?._id) {
+              throw new Error('Failed to save word');
+            }
+          }
+        } catch (error) {
+          if ((error as ApiError)?.isBadRequestError && (error as ApiError).message.includes('already saved')) {
+            setIsSaved(true);
+            setSaveSuccess(true);
+            setTimeout(() => setSaveSuccess(false), 2000);
+            return;
+          }
+          throw error;
         }
       }
       
       setIsSaved(!isSaved);
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 2000);
+      triggerSavedWordsUpdate();
     } catch (error) {
       console.error('Error saving word:', error);
       setSaveError(true);
-      // Try again after a delay
-      setTimeout(() => {
-        checkIfWordSaved();
-      }, 1000);
+      
+      if (isAuthenticated) {
+        if (isSaved) {
+          saveWord(wordData);
+        } else {
+          removeSavedWord(wordData.word);
+        }
+      }
+      
+      await checkIfWordSaved();
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Don't render anything on the server
   if (!isClient) {
     return null;
   }
@@ -160,4 +235,4 @@ const SaveWordButton: React.FC<SaveWordButtonProps> = ({ wordData }) => {
   );
 };
 
-export default SaveWordButton; 
+export default SaveWordButton;
