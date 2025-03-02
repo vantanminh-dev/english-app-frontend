@@ -8,6 +8,7 @@ import SavedWords from '@/components/SavedWords';
 import { useAuth } from '@/context/AuthContext';
 import AuthModal from '@/components/AuthModal';
 import TextToSpeechButton from '@/components/TextToSpeechButton';
+import CloudSaveIndicator from '@/components/CloudSaveIndicator';
 
 export default function Home() {
   const [word, setWord] = useState('');
@@ -82,7 +83,10 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="min-h-screen p-4 md:p-8">
+    <div className="min-h-screen p-4 md:p-8 relative">
+      {/* Cloud Save Indicator */}
+      <CloudSaveIndicator />
+      
       <div className="max-w-4xl mx-auto">
         <h1 className="text-4xl font-bold text-center mb-12">
           English Dictionary

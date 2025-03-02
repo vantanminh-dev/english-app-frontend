@@ -29,6 +29,9 @@ export interface RegisterCredentials {
   password: string;
 }
 
+// Helper function to check if code is running on the client
+const isClient = typeof window !== 'undefined';
+
 // Local storage keys
 const TOKEN_KEY = 'auth_token';
 const USER_KEY = 'auth_user';
@@ -44,9 +47,11 @@ export const authApi = axios.create({
 // Add auth token to requests if available
 authApi.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem(TOKEN_KEY);
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    if (isClient) {
+      const token = localStorage.getItem(TOKEN_KEY);
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
     }
     return config;
   },
@@ -60,9 +65,11 @@ export const authService = {
     const response = await authApi.post<AuthResponse>('/auth/register', credentials);
     const user = response.data;
     
-    // Save auth data
-    localStorage.setItem(TOKEN_KEY, user.token);
-    localStorage.setItem(USER_KEY, JSON.stringify(user));
+    // Save auth data (only on client)
+    if (isClient) {
+      localStorage.setItem(TOKEN_KEY, user.token);
+      localStorage.setItem(USER_KEY, JSON.stringify(user));
+    }
     
     return user;
   },
@@ -72,21 +79,27 @@ export const authService = {
     const response = await authApi.post<AuthResponse>('/auth/login', credentials);
     const user = response.data;
     
-    // Save auth data
-    localStorage.setItem(TOKEN_KEY, user.token);
-    localStorage.setItem(USER_KEY, JSON.stringify(user));
+    // Save auth data (only on client)
+    if (isClient) {
+      localStorage.setItem(TOKEN_KEY, user.token);
+      localStorage.setItem(USER_KEY, JSON.stringify(user));
+    }
     
     return user;
   },
 
   // Logout user
   logout: (): void => {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(USER_KEY);
+    if (isClient) {
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(USER_KEY);
+    }
   },
 
   // Get current user
   getCurrentUser: (): User | null => {
+    if (!isClient) return null;
+    
     const userJson = localStorage.getItem(USER_KEY);
     if (!userJson) return null;
     
@@ -109,20 +122,24 @@ export const authService = {
     const response = await authApi.put<AuthResponse>('/auth/me', data);
     const user = response.data;
     
-    // Update stored user data
-    localStorage.setItem(TOKEN_KEY, user.token);
-    localStorage.setItem(USER_KEY, JSON.stringify(user));
+    // Update stored user data (only on client)
+    if (isClient) {
+      localStorage.setItem(TOKEN_KEY, user.token);
+      localStorage.setItem(USER_KEY, JSON.stringify(user));
+    }
     
     return user;
   },
 
   // Check if user is authenticated
   isAuthenticated: (): boolean => {
+    if (!isClient) return false;
     return !!localStorage.getItem(TOKEN_KEY);
   },
 
   // Get auth token
   getToken: (): string | null => {
+    if (!isClient) return null;
     return localStorage.getItem(TOKEN_KEY);
   }
 };

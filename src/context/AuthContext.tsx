@@ -1,3 +1,5 @@
+'use client';
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import authService, { User, LoginCredentials, RegisterCredentials } from '@/utils/auth';
@@ -10,6 +12,8 @@ interface AuthContextType {
   register: (credentials: RegisterCredentials) => Promise<void>;
   logout: () => void;
   error: string | null;
+  savedWordsUpdated: number;
+  triggerSavedWordsUpdate: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -30,11 +34,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [savedWordsUpdated, setSavedWordsUpdated] = useState(0);
+  const [isClient, setIsClient] = useState(false);
   const router = useRouter();
+
+  // Set isClient to true after component mounts
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   // Check if user is already logged in
   useEffect(() => {
     const initAuth = async () => {
+      if (!isClient) return;
+      
       try {
         const currentUser = authService.getCurrentUser();
         if (currentUser) {
@@ -48,7 +61,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
 
     initAuth();
-  }, []);
+  }, [isClient]);
 
   const login = async (credentials: LoginCredentials) => {
     setIsLoading(true);
@@ -86,6 +99,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     router.push('/');
   };
 
+  const triggerSavedWordsUpdate = () => {
+    setSavedWordsUpdated(prev => prev + 1);
+  };
+
   const value = {
     user,
     isAuthenticated: !!user,
@@ -93,7 +110,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     login,
     register,
     logout,
-    error
+    error,
+    savedWordsUpdated,
+    triggerSavedWordsUpdate
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

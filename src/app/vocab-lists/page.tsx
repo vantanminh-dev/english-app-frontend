@@ -6,10 +6,15 @@ import { vocabListApi, VocabList } from '@/utils/api';
 import Link from 'next/link';
 
 export default function VocabListsPage() {
+  const [isMounted, setIsMounted] = useState(false);
   const store = useStore();
   const [isCreating, setIsCreating] = useState(false);
   const [newListName, setNewListName] = useState('');
   const [newListDesc, setNewListDesc] = useState('');
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
     loadVocabLists();
@@ -132,7 +137,7 @@ export default function VocabListsPage() {
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {store.vocabLists.map((list) => (
+        {isMounted && store.vocabLists.map((list) => (
             <div
               key={list._id}
               className="bg-white rounded-lg shadow p-6 flex flex-col"
@@ -197,7 +202,7 @@ export default function VocabListsPage() {
           ))}
         </div>
 
-        {!store.isLoading && store.vocabLists.length === 0 && (
+        {isMounted && !store.isLoading && store.vocabLists.length === 0 && (
           <div className="text-center text-gray-600 mt-8">
             No vocabulary lists yet. Create one to get started!
           </div>
